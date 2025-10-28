@@ -83,3 +83,4 @@ app/src/main/assets/models/
 
 # Documentation (not needed for compilation)
 docs/
+platform-tools/
