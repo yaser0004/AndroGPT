@@ -1,0 +1,85 @@
+# Android SDK cache
+.android/
+
+# Native libraries (generated)
+*.so
+*.a
+
+# Android Studio
+*.iml
+*.ipr
+*.iws
+.idea/
+captures/
+.navigation/
+
+# Gradle
+.gradle/
+build/
+gradle-app.setting
+
+# CMake and NDK
+.externalNativeBuild
+.cxx/
+cmake-build-*/
+CMakeCache.txt
+CMakeFiles
+obj/
+
+# Generated files
+bin/
+gen/
+out/
+release/
+*.dex
+*.class
+*.apk
+*.ap_
+*.aab
+
+# Profiling
+*.hprof
+
+# Kotlin
+.kotlin
+
+# Configuration cache
+.configuration-cache/
+
+# Local configuration (environment-specific)
+local.properties
+
+# Logs and temporary files
+*.log
+*.tmp
+*.temp
+*.swp
+*.swo
+*.bak
+*.ps1.log
+
+# OS-specific
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+*~
+
+# Version control
+vcs.xml
+
+# Keystores
+*.jks
+*.keystore
+
+# Large assets (models too big for git)
+*.gguf
+*.bin
+*.safetensors
+app/src/main/assets/models/
+
+# Documentation (not needed for compilation)
+docs/
