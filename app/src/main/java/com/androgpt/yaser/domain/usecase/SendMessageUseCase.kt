@@ -56,14 +56,14 @@ class SendMessageUseCase @Inject constructor(
         return cleaned
     }
     
-    private fun buildPrompt(messages: List<Message>): String {
+    private fun buildPrompt(messages: List<Message>, systemPrompt: String): String {
         // Microsoft Phi-3 uses ChatML format with specific tokens
         // Format: <|system|>system_message<|end|><|user|>user_message<|end|><|assistant|>
         val promptBuilder = StringBuilder()
         
         // System prompt
         promptBuilder.append("<|system|>")
-        promptBuilder.append("You are a helpful AI assistant.")
+        promptBuilder.append(systemPrompt)
         promptBuilder.append("<|end|>\n")
         
         // Add conversation history - exclude the last message as it's the current query
@@ -105,7 +105,8 @@ class SendMessageUseCase @Inject constructor(
         temperature: Float,
         maxTokens: Int,
         topP: Float,
-        topK: Int
+        topK: Int,
+        systemPrompt: String
     ): Flow<GenerationState> = flow {
         
         Log.d(TAG, "=== SEND MESSAGE USE CASE START ===")
@@ -132,7 +133,7 @@ class SendMessageUseCase @Inject constructor(
         Log.d(TAG, "Retrieved ${messages.size} messages from history")
         
         // Format prompt with TinyLlama chat template
-        val formattedPrompt = buildPrompt(messages)
+    val formattedPrompt = buildPrompt(messages, systemPrompt)
         
         // Log the prompt for debugging
         Log.d(TAG, "Formatted prompt (${formattedPrompt.length} chars):\n$formattedPrompt")

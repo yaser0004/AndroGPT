@@ -6,6 +6,7 @@ import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.floatPreferencesKey
 import androidx.datastore.preferences.core.intPreferencesKey
+import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
@@ -24,9 +25,10 @@ class GenerationPreferences(private val context: Context) {
         private val MIN_P = floatPreferencesKey("min_p")
         private val TFS_Z = floatPreferencesKey("tfs_z")
         private val TYPICAL_P = floatPreferencesKey("typical_p")
-        private val MIROSTAT = intPreferencesKey("mirostat")
+    private val MIROSTAT = intPreferencesKey("mirostat")
         private val MIROSTAT_TAU = floatPreferencesKey("mirostat_tau")
         private val MIROSTAT_ETA = floatPreferencesKey("mirostat_eta")
+    private val SYSTEM_PROMPT = stringPreferencesKey("system_prompt")
         
         // Defaults
         const val DEFAULT_TEMPERATURE = 0.7f
@@ -41,6 +43,7 @@ class GenerationPreferences(private val context: Context) {
         const val DEFAULT_MIROSTAT = 0
         const val DEFAULT_MIROSTAT_TAU = 5.0f
         const val DEFAULT_MIROSTAT_ETA = 0.1f
+        const val DEFAULT_SYSTEM_PROMPT = "You are a helpful AI assistant. Do not use emoji characters in your responses - use text-based emoticons like :) or <3 instead."
     }
     
     data class GenerationSettings(
@@ -55,7 +58,8 @@ class GenerationPreferences(private val context: Context) {
         val typicalP: Float = DEFAULT_TYPICAL_P,
         val mirostat: Int = DEFAULT_MIROSTAT,
         val mirostatTau: Float = DEFAULT_MIROSTAT_TAU,
-        val mirostatEta: Float = DEFAULT_MIROSTAT_ETA
+        val mirostatEta: Float = DEFAULT_MIROSTAT_ETA,
+        val systemPrompt: String = DEFAULT_SYSTEM_PROMPT
     )
     
     suspend fun saveSettings(settings: GenerationSettings) {
@@ -72,6 +76,7 @@ class GenerationPreferences(private val context: Context) {
             preferences[MIROSTAT] = settings.mirostat
             preferences[MIROSTAT_TAU] = settings.mirostatTau
             preferences[MIROSTAT_ETA] = settings.mirostatEta
+            preferences[SYSTEM_PROMPT] = settings.systemPrompt
         }
     }
     
@@ -89,7 +94,8 @@ class GenerationPreferences(private val context: Context) {
                 typicalP = preferences[TYPICAL_P] ?: DEFAULT_TYPICAL_P,
                 mirostat = preferences[MIROSTAT] ?: DEFAULT_MIROSTAT,
                 mirostatTau = preferences[MIROSTAT_TAU] ?: DEFAULT_MIROSTAT_TAU,
-                mirostatEta = preferences[MIROSTAT_ETA] ?: DEFAULT_MIROSTAT_ETA
+                mirostatEta = preferences[MIROSTAT_ETA] ?: DEFAULT_MIROSTAT_ETA,
+                systemPrompt = preferences[SYSTEM_PROMPT] ?: DEFAULT_SYSTEM_PROMPT
             )
         }
     }
@@ -163,6 +169,12 @@ class GenerationPreferences(private val context: Context) {
     suspend fun saveMirostatEta(value: Float) {
         context.settingsDataStore.edit { preferences ->
             preferences[MIROSTAT_ETA] = value
+        }
+    }
+
+    suspend fun saveSystemPrompt(value: String) {
+        context.settingsDataStore.edit { preferences ->
+            preferences[SYSTEM_PROMPT] = value
         }
     }
 }

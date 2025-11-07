@@ -60,16 +60,22 @@ class SettingsViewModel @Inject constructor(
     
     val mirostatEta = _generationSettings.map { it.mirostatEta }
         .stateIn(viewModelScope, SharingStarted.Lazily, 0.1f)
-    
+
+    private val _systemPrompt = MutableStateFlow(GenerationPreferences.DEFAULT_SYSTEM_PROMPT)
+    val systemPrompt = _systemPrompt.asStateFlow()
+
     init {
         // Load settings from preferences
         viewModelScope.launch {
             generationPreferences.getSettings().collect { settings ->
                 _generationSettings.value = settings
+                if (_systemPrompt.value != settings.systemPrompt) {
+                    _systemPrompt.value = settings.systemPrompt
+                }
             }
         }
     }
-    
+
     private val _contextLength = MutableStateFlow(2048)
     val contextLength = _contextLength.asStateFlow()
     
@@ -78,9 +84,6 @@ class SettingsViewModel @Inject constructor(
     
     private val _gpuLayers = MutableStateFlow(0)
     val gpuLayers = _gpuLayers.asStateFlow()
-    
-    private val _systemPrompt = MutableStateFlow("You are a helpful AI assistant. Do not use emoji characters in your responses - use text-based emoticons like :) or <3 instead.")
-    val systemPrompt = _systemPrompt.asStateFlow()
     
     private val _isLoading = MutableStateFlow(false)
     val isLoading = _isLoading.asStateFlow()
@@ -187,6 +190,20 @@ class SettingsViewModel @Inject constructor(
     fun setSystemPrompt(value: String) {
         _systemPrompt.value = value
     }
+
+    fun saveSystemPrompt() {
+        viewModelScope.launch {
+            val sanitized = _systemPrompt.value.trim()
+            generationPreferences.saveSystemPrompt(sanitized)
+            _generationSettings.value = _generationSettings.value.copy(systemPrompt = sanitized)
+            _systemPrompt.value = sanitized
+            _message.value = if (sanitized.isEmpty()) {
+                "System prompt cleared"
+            } else {
+                "System prompt saved"
+            }
+        }
+    }
     
     fun loadModel(modelPath: String, modelName: String, modelSize: Long) {
         viewModelScope.launch {
@@ -250,7 +267,8 @@ class SettingsViewModel @Inject constructor(
                     typicalP = 1.0f,
                     mirostat = 0,
                     mirostatTau = 5.0f,
-                    mirostatEta = 0.1f
+                    mirostatEta = 0.1f,
+                    systemPrompt = _systemPrompt.value
                 )
                 "balanced" -> GenerationPreferences.GenerationSettings(
                     temperature = 0.7f,
@@ -264,7 +282,8 @@ class SettingsViewModel @Inject constructor(
                     typicalP = 1.0f,
                     mirostat = 0,
                     mirostatTau = 5.0f,
-                    mirostatEta = 0.1f
+                    mirostatEta = 0.1f,
+                    systemPrompt = _systemPrompt.value
                 )
                 "creative" -> GenerationPreferences.GenerationSettings(
                     temperature = 1.2f,
@@ -278,7 +297,8 @@ class SettingsViewModel @Inject constructor(
                     typicalP = 1.0f,
                     mirostat = 0,
                     mirostatTau = 5.0f,
-                    mirostatEta = 0.1f
+                    mirostatEta = 0.1f,
+                    systemPrompt = _systemPrompt.value
                 )
                 "focused" -> GenerationPreferences.GenerationSettings(
                     temperature = 0.7f,
@@ -292,7 +312,8 @@ class SettingsViewModel @Inject constructor(
                     typicalP = 1.0f,
                     mirostat = 2,
                     mirostatTau = 5.0f,
-                    mirostatEta = 0.1f
+                    mirostatEta = 0.1f,
+                    systemPrompt = _systemPrompt.value
                 )
                 else -> _generationSettings.value
             }

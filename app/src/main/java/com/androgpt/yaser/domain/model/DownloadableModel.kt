@@ -89,15 +89,86 @@ object AvailableModels {
                 "📱 Great mobile performance"
     )
     
+    // ========== GOOGLE - GEMMA 2 MODELS ==========
+    
+    val GEMMA_2_2B_Q4_K_M = DownloadableModel(
+        id = "gemma-2-2b-it-q4_k_m",
+        name = "Gemma 2 2B Q4 (Ultra Fast)",
+        description = "Google Gemma 2 2B Instruct, Q4_K_M quantization (compact & efficient)",
+        downloadUrl = "https://huggingface.co/bartowski/gemma-2-2b-it-GGUF/resolve/main/gemma-2-2b-it-Q4_K_M.gguf",
+        fileSize = 1708582752L, // ~1.59 GB (actual server size)
+        fileName = "gemma-2-2b-it-Q4_K_M.gguf",
+        quantization = "Q4_K_M",
+        creator = "Google",
+        capabilities = "• 2 billion parameters\n" +
+                "• 8K token context window\n" +
+                "• Ultra-fast inference\n" +
+                "• Compact file size\n" +
+                "• Good instruction following\n" +
+                "• Efficient Q4 quantization",
+        recommendedFor = "Best for: Budget devices, quick chat, simple tasks, fast responses\n\n" +
+                "Recommended settings:\n" +
+                "• Context Length: 2048-4096\n" +
+                "• Temperature: 0.7\n" +
+                "• Works on 3GB+ RAM devices\n" +
+                "⚡ Fastest Gemma option"
+    )
+    
+    val GEMMA_2_2B_Q6_K = DownloadableModel(
+        id = "gemma-2-2b-it-q6_k",
+        name = "Gemma 2 2B Q6 (Balanced)",
+        description = "Google Gemma 2 2B Instruct, Q6_K quantization (better quality)",
+        downloadUrl = "https://huggingface.co/bartowski/gemma-2-2b-it-GGUF/resolve/main/gemma-2-2b-it-Q6_K.gguf",
+        fileSize = 2151393120L, // ~2.00 GB (actual server size)
+        fileName = "gemma-2-2b-it-Q6_K.gguf",
+        quantization = "Q6_K",
+        creator = "Google",
+        capabilities = "• 2 billion parameters\n" +
+                "• 8K token context window\n" +
+                "• High-quality Q6 quantization\n" +
+                "• Better accuracy than Q4\n" +
+                "• Good balance of speed/quality\n" +
+                "• Excellent instruction following",
+        recommendedFor = "Best for: Mid-range devices, general chat, Q&A, creative writing\n\n" +
+                "Recommended settings:\n" +
+                "• Context Length: 2048-6144\n" +
+                "• Temperature: 0.6-0.7\n" +
+                "• Works on 4GB+ RAM devices\n" +
+                "🎯 Recommended Gemma 2B"
+    )
+    
+    val GEMMA_2_9B_Q4_K_M = DownloadableModel(
+        id = "gemma-2-9b-it-q4_k_m",
+        name = "Gemma 2 9B Q4 (High Performance)",
+        description = "Google Gemma 2 9B Instruct, Q4_K_M quantization (powerful & balanced)",
+        downloadUrl = "https://huggingface.co/bartowski/gemma-2-9b-it-GGUF/resolve/main/gemma-2-9b-it-Q4_K_M.gguf",
+        fileSize = 5761057728L, // ~5.37 GB (actual server size)
+        fileName = "gemma-2-9b-it-Q4_K_M.gguf",
+        quantization = "Q4_K_M",
+        creator = "Google",
+        capabilities = "• 9 billion parameters\n" +
+                "• 8K token context window\n" +
+                "• Advanced reasoning\n" +
+                "• Excellent instruction following\n" +
+                "• Great for complex tasks\n" +
+                "• Strong coding abilities",
+        recommendedFor = "Best for: High-end devices, coding, complex reasoning, creative writing\n\n" +
+                "Recommended settings:\n" +
+                "• Context Length: 4096-8192\n" +
+                "• Temperature: 0.6-0.7\n" +
+                "• Requires 8GB+ RAM\n" +
+                "🚀 Most powerful Gemma"
+    )
+    
     // ========== MICROSOFT - PHI-3 MODELS ==========
     
     val PHI_3_MINI_4K_Q2_K = DownloadableModel(
         id = "phi-3-mini-4k-q2_k",
         name = "Phi-3 Mini 4K Q2 (Ultra Light)",
         description = "Microsoft Phi-3 Mini 3.8B, 4K context, Q2_K quantization (smallest, fastest)",
-        downloadUrl = "https://huggingface.co/microsoft/Phi-3-mini-4k-instruct-gguf/resolve/main/Phi-3-mini-4k-instruct-q2_K.gguf",
-        fileSize = 1560000000L, // ~1.56 GB
-        fileName = "Phi-3-mini-4k-instruct-q2_K.gguf",
+        downloadUrl = "https://huggingface.co/bartowski/Phi-3-mini-4k-instruct-GGUF/resolve/main/Phi-3-mini-4k-instruct-Q2_K.gguf",
+        fileSize = 1416203264L, // ~1.32 GB (actual server size)
+        fileName = "Phi-3-mini-4k-instruct-Q2_K.gguf",
         quantization = "Q2_K",
         creator = "Microsoft",
         capabilities = "• 3.8 billion parameters\n" +
@@ -117,10 +188,10 @@ object AvailableModels {
     val PHI_3_MINI_4K_Q3_K_M = DownloadableModel(
         id = "phi-3-mini-4k-q3_k_m",
         name = "Phi-3 Mini 4K Q3 (Light)",
-        description = "Microsoft Phi-3 Mini 3.8B, 4K context, Q3_K_M quantization (light, fast)",
-        downloadUrl = "https://huggingface.co/microsoft/Phi-3-mini-4k-instruct-gguf/resolve/main/Phi-3-mini-4k-instruct-q3_K_M.gguf",
-        fileSize = 1860000000L, // ~1.86 GB
-        fileName = "Phi-3-mini-4k-instruct-q3_K_M.gguf",
+        description = "Microsoft Phi-3 Mini 3.8B, 4K context, Q3_K_M quantization (balanced speed/quality)",
+        downloadUrl = "https://huggingface.co/bartowski/Phi-3-mini-4k-instruct-GGUF/resolve/main/Phi-3-mini-4k-instruct-Q3_K_M.gguf",
+        fileSize = 1955475968L, // ~1.82 GB (actual server size)
+        fileName = "Phi-3-mini-4k-instruct-Q3_K_M.gguf",
         quantization = "Q3_K_M",
         creator = "Microsoft",
         capabilities = "• 3.8 billion parameters\n" +
@@ -140,9 +211,9 @@ object AvailableModels {
     val PHI_3_MINI_4K_Q4_K_M = DownloadableModel(
         id = "phi-3-mini-4k-q4_k_m",
         name = "Phi-3 Mini 4K Q4 (Recommended)",
-        description = "Microsoft Phi-3 Mini 3.8B, 4K context, Q4_K_M quantization (recommended)",
+        description = "Microsoft Phi-3 Mini 3.8B, 4K context, Q4_K_M quantization (best balance)",
         downloadUrl = "https://huggingface.co/microsoft/Phi-3-mini-4k-instruct-gguf/resolve/main/Phi-3-mini-4k-instruct-q4.gguf",
-        fileSize = 2200000000L, // ~2.2 GB
+        fileSize = 2393231072L, // ~2.39 GB (actual server size)
         fileName = "Phi-3-mini-4k-instruct-q4.gguf",
         quantization = "Q4_K_M",
         creator = "Microsoft",
@@ -163,10 +234,10 @@ object AvailableModels {
     val PHI_3_MINI_4K_Q5_K_M = DownloadableModel(
         id = "phi-3-mini-4k-q5_k_m",
         name = "Phi-3 Mini 4K Q5 (High Quality)",
-        description = "Microsoft Phi-3 Mini 3.8B, 4K context, Q5_K_M quantization (high quality)",
-        downloadUrl = "https://huggingface.co/microsoft/Phi-3-mini-4k-instruct-gguf/resolve/main/Phi-3-mini-4k-instruct-q5_K_M.gguf",
-        fileSize = 2670000000L, // ~2.67 GB
-        fileName = "Phi-3-mini-4k-instruct-q5_K_M.gguf",
+        description = "Microsoft Phi-3 Mini 3.8B, 4K context, Q5_K_M quantization (best quality)",
+        downloadUrl = "https://huggingface.co/bartowski/Phi-3-mini-4k-instruct-GGUF/resolve/main/Phi-3-mini-4k-instruct-Q5_K_M.gguf",
+        fileSize = 2815275008L, // ~2.62 GB (actual server size)
+        fileName = "Phi-3-mini-4k-instruct-Q5_K_M.gguf",
         quantization = "Q5_K_M",
         creator = "Microsoft",
         capabilities = "• 3.8 billion parameters\n" +
@@ -185,15 +256,19 @@ object AvailableModels {
     
     fun getAllModels(): List<DownloadableModel> = listOf(
         // Meta Llama 3.2 models
-        LLAMA_3_2_1B_Q8_0,        // ~1.17 GB - Fast & accurate
-        LLAMA_3_2_3B_Q6_K,        // ~2.52 GB - Balanced quality
+        LLAMA_3_2_1B_Q8_0,        // ~1.32 GB - Fast & accurate
+        LLAMA_3_2_3B_Q6_K,        // ~2.64 GB - Balanced quality
         // HuggingFace SmolLM2 models
-        SMOLLM2_1_7B_Q8_0,        // ~1.84 GB - Efficient mobile
+        SMOLLM2_1_7B_Q8_0,        // ~1.82 GB - Efficient mobile
+        // Google Gemma 2 models
+        GEMMA_2_2B_Q4_K_M,        // ~1.59 GB - Ultra fast
+        GEMMA_2_2B_Q6_K,          // ~2.00 GB - Balanced (recommended)
+        GEMMA_2_9B_Q4_K_M,        // ~5.37 GB - High performance
         // Microsoft Phi-3 models
-        PHI_3_MINI_4K_Q2_K,       // ~1.56 GB - Ultra light
-        PHI_3_MINI_4K_Q3_K_M,     // ~1.86 GB - Light
-        PHI_3_MINI_4K_Q4_K_M,     // ~2.2 GB - Recommended
-        PHI_3_MINI_4K_Q5_K_M      // ~2.67 GB - High quality
+        PHI_3_MINI_4K_Q2_K,       // ~1.32 GB - Ultra light
+        PHI_3_MINI_4K_Q3_K_M,     // ~1.82 GB - Light
+        PHI_3_MINI_4K_Q4_K_M,     // ~2.39 GB - Recommended
+        PHI_3_MINI_4K_Q5_K_M      // ~2.62 GB - High quality
     )
     
     fun getModelsByCreator(): Map<String, List<DownloadableModel>> {

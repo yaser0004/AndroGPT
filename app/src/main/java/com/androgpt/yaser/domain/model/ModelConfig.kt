@@ -11,5 +11,5 @@ data class ModelConfig(
     val topK: Int = 40,
     val nThreads: Int = 4,
     val nGpuLayers: Int = 0,
-    val systemPrompt: String = "You are a helpful AI assistant. Do not use emoji characters in your responses - use text-based emoticons like :) or <3 instead."
+    val systemPrompt: String = ""
 )

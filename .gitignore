@@ -10,6 +10,7 @@
 *.ipr
 *.iws
 .idea/
+.vscode/
 captures/
 .navigation/
 
@@ -57,6 +58,8 @@ local.properties
 *.swo
 *.bak
 *.ps1.log
+hs_err_pid*.log
+replay_pid*.log
 
 # OS-specific
 .DS_Store

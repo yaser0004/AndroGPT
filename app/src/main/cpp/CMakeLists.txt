@@ -91,6 +91,7 @@ target_include_directories(${CMAKE_PROJECT_NAME} PRIVATE
 target_link_libraries(${CMAKE_PROJECT_NAME}
     ${log-lib}
     ${android-lib}
+    c++_shared
 )
 
 # Compiler flags for optimization

@@ -449,13 +449,31 @@ fun SettingsScreen(
                                     "The system prompt is included at the start of every conversation."
                         )
                     }
-                    OutlinedTextField(
-                        value = systemPrompt,
-                        onValueChange = viewModel::setSystemPrompt,
+                    Row(
                         modifier = Modifier.fillMaxWidth(),
-                        placeholder = { Text("Enter system instructions...") },
-                        minLines = 3,
-                        maxLines = 6
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalAlignment = Alignment.Top
+                    ) {
+                        OutlinedTextField(
+                            value = systemPrompt,
+                            onValueChange = viewModel::setSystemPrompt,
+                            modifier = Modifier
+                                .weight(1f),
+                            placeholder = { Text("Enter system instructions...") },
+                            minLines = 3,
+                            maxLines = 6
+                        )
+                        Button(
+                            onClick = viewModel::saveSystemPrompt,
+                            modifier = Modifier.align(Alignment.CenterVertically)
+                        ) {
+                            Text("Save")
+                        }
+                    }
+                    Text(
+                        text = "Leave blank to disable system instructions.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
             }

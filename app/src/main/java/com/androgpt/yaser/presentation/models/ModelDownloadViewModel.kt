@@ -53,20 +53,37 @@ class ModelDownloadViewModel @Inject constructor(
     
     fun refreshDownloadedModels() {
         android.util.Log.d("ModelDownloadViewModel", "Refreshing downloaded models list")
+        val modelsDir = java.io.File(context.filesDir, "models")
+        if (!modelsDir.exists()) {
+            android.util.Log.d("ModelDownloadViewModel", "Models directory doesn't exist")
+            _downloadedModels.value = emptySet()
+            return
+        }
+        
         val downloaded = _availableModels.value
-            .filter { downloadRepository.isModelDownloaded(it) }
+            .filter { model ->
+                val modelFile = java.io.File(modelsDir, model.fileName)
+                val exists = modelFile.exists()
+                val sizeMatches = if (exists) {
+                    // Allow small size differences (within 1%)
+                    val actualSize = modelFile.length()
+                    val sizeDiff = kotlin.math.abs(actualSize - model.fileSize).toFloat() / model.fileSize.toFloat()
+                    sizeDiff < 0.01f // Less than 1% difference
+                } else false
+                
+                android.util.Log.d("ModelDownloadViewModel", "Model ${model.name}: exists=$exists, sizeMatches=$sizeMatches")
+                exists && sizeMatches
+            }
             .map { it.id }
             .toSet()
         
         android.util.Log.d("ModelDownloadViewModel", "Downloaded models: ${downloaded.size} - $downloaded")
         _downloadedModels.value = downloaded
         
-        // Clear success states for downloaded models
+        // Clear success states for downloaded models and force UI update
         _downloadStates.value = _downloadStates.value.toMutableMap().apply {
             downloaded.forEach { modelId ->
-                if (get(modelId) is DownloadState.Success) {
-                    remove(modelId)
-                }
+                remove(modelId) // Remove any download state for completed models
             }
         }
     }
@@ -74,33 +91,48 @@ class ModelDownloadViewModel @Inject constructor(
     /**
      * Start polling the temp file to track download progress
      */
-    private fun startProgressPolling(model: DownloadableModel) {
+    private fun startProgressPolling(model: DownloadableModel, onComplete: () -> Unit = {}) {
         // Cancel existing polling for this model
         activePollingJobs[model.id]?.cancel()
         
         val job = viewModelScope.launch {
             android.util.Log.i("ModelDownloadViewModel", "Started progress polling for ${model.name}")
             
-            // Give service time to start
-            delay(100)
+            // Give service time to start and create temp file (increased from 100ms to 1000ms)
+            delay(1000)
             
             val tempFile = java.io.File(context.filesDir, "models/${model.fileName}.tmp")
             val finalFile = java.io.File(context.filesDir, "models/${model.fileName}")
             
+            // Use faster polling for first 10 seconds to catch initial progress
+            var pollCount = 0
+            val fastPollThreshold = 20 // 20 polls at 250ms = 5 seconds
+            
             while (isActive) {
                 // Check if download is complete
-                if (finalFile.exists() && finalFile.length() == model.fileSize) {
+                if (finalFile.exists() && finalFile.length() >= model.fileSize) {
                     android.util.Log.i("ModelDownloadViewModel", "Download complete detected for ${model.name}")
                     _downloadStates.value = _downloadStates.value.toMutableMap().apply {
                         put(model.id, DownloadState.Success)
                     }
+                    
+                    // Immediately refresh to update downloaded models list
+                    refreshDownloadedModels()
+                    
                     // Show completion message
                     _completionMessage.value = "✓ ${model.name} downloaded successfully!"
+                    
+                    // Call the onComplete callback to notify ModelsViewModel
+                    onComplete()
+                    
+                    // Refresh again after a short delay to ensure file is fully written
+                    delay(500)
+                    refreshDownloadedModels()
+                    
                     // Clear message after 5 seconds
-                    delay(5000)
+                    delay(4500) // Total 5 seconds including the 500ms above
                     _completionMessage.value = null
                     
-                    refreshDownloadedModels()
                     break
                 }
                 
@@ -114,6 +146,7 @@ class ModelDownloadViewModel @Inject constructor(
                     _downloadStates.value = _downloadStates.value.toMutableMap().apply {
                         put(model.id, DownloadState.Downloading(progress, downloadedBytes, model.fileSize))
                     }
+                    android.util.Log.d("ModelDownloadViewModel", "${model.name} progress: ${(progress * 100).toInt()}% ($downloadedBytes / ${model.fileSize} bytes)")
                 } else {
                     // Temp file doesn't exist yet, show 0% progress
                     _downloadStates.value = _downloadStates.value.toMutableMap().apply {
@@ -121,7 +154,10 @@ class ModelDownloadViewModel @Inject constructor(
                     }
                 }
                 
-                delay(500) // Poll every 500ms
+                // Use faster polling initially, then slow down
+                pollCount++
+                val pollInterval = if (pollCount < fastPollThreshold) 250L else 500L
+                delay(pollInterval)
             }
             
             android.util.Log.i("ModelDownloadViewModel", "Stopped progress polling for ${model.name}")
@@ -134,8 +170,8 @@ class ModelDownloadViewModel @Inject constructor(
     fun downloadModel(model: DownloadableModel, onSuccess: () -> Unit = {}) {
         android.util.Log.i("ModelDownloadViewModel", "Starting download for ${model.name}")
         
-        // Start progress polling immediately
-        startProgressPolling(model)
+        // Start progress polling immediately, passing the onSuccess callback
+        startProgressPolling(model, onComplete = onSuccess)
         
         // Start the foreground service
         val intent = Intent(context, ModelDownloadService::class.java).apply {

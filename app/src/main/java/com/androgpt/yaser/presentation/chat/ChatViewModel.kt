@@ -208,7 +208,8 @@ class ChatViewModel @Inject constructor(
                     temperature = settings.temperature,
                     maxTokens = settings.maxTokens,
                     topP = settings.topP,
-                    topK = settings.topK
+                    topK = settings.topK,
+                    systemPrompt = settings.systemPrompt
                 ).collect { state ->
                     Log.d("ChatViewModel", "Received generation state: $state (${state.javaClass.simpleName})")
                     _generationState.value = state
