@@ -12,6 +12,7 @@ import com.androgpt.yaser.domain.repository.ModelRepository
 import com.androgpt.yaser.domain.usecase.SendMessageUseCase
 import com.androgpt.yaser.domain.util.ChatNameGenerator
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -42,6 +43,8 @@ class ChatViewModel @Inject constructor(
     
     private val _conversations = MutableStateFlow<List<com.androgpt.yaser.domain.model.Conversation>>(emptyList())
     val conversations = _conversations.asStateFlow()
+
+    private var messagesJob: Job? = null
     
     // Generation parameters - loaded from preferences
     private val _generationSettings = MutableStateFlow(
@@ -56,11 +59,11 @@ class ChatViewModel @Inject constructor(
                 _generationSettings.value = settings
             }
         }
-        
-        // Auto-create a new conversation on startup
+
+        loadAllConversations()
+
         viewModelScope.launch {
-            startNewConversation()
-            loadAllConversations()
+            initializeConversation()
         }
     }
     
@@ -70,6 +73,54 @@ class ChatViewModel @Inject constructor(
                 .collect { convos ->
                     _conversations.value = convos
                 }
+        }
+    }
+
+    private suspend fun initializeConversation() {
+        val conversationsSnapshot = try {
+            chatRepository.getAllConversations().first()
+        } catch (e: Exception) {
+            Log.e("ChatViewModel", "Failed to load conversations during init", e)
+            startNewConversation()
+            return
+        }
+
+        if (conversationsSnapshot.isEmpty()) {
+            Log.d("ChatViewModel", "No existing conversations found, creating a fresh one")
+            startNewConversation()
+            return
+        }
+
+        val latestConversation = conversationsSnapshot.maxByOrNull { it.updatedAt }
+        if (latestConversation == null) {
+            Log.d("ChatViewModel", "Unable to resolve latest conversation, creating a fresh one")
+            startNewConversation()
+            return
+        }
+
+        val hasMessages = try {
+            chatRepository.getMessagesForConversation(latestConversation.id).first().isNotEmpty()
+        } catch (e: Exception) {
+            Log.e("ChatViewModel", "Failed to inspect messages for conversation ${latestConversation.id}", e)
+            startNewConversation(modelName = latestConversation.modelName)
+            return
+        }
+
+        if (hasMessages) {
+            Log.d(
+                "ChatViewModel",
+                "Latest conversation (${latestConversation.id}) has messages, creating a new chat for fresh start"
+            )
+            startNewConversation(modelName = latestConversation.modelName)
+        } else {
+            Log.d(
+                "ChatViewModel",
+                "Reusing existing empty conversation with ID: ${latestConversation.id}"
+            )
+            _currentConversationId.value = latestConversation.id
+            _messages.value = emptyList()
+            _generationState.value = GenerationState.Idle
+            loadMessages(latestConversation.id)
         }
     }
     
@@ -109,7 +160,8 @@ class ChatViewModel @Inject constructor(
     }
     
     private fun loadMessages(conversationId: Long) {
-        viewModelScope.launch {
+        messagesJob?.cancel()
+        messagesJob = viewModelScope.launch {
             chatRepository.getMessagesForConversation(conversationId)
                 .collect { messages ->
                     _messages.value = messages

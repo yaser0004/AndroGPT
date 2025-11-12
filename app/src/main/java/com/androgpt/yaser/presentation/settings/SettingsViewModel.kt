@@ -10,6 +10,7 @@ import com.androgpt.yaser.domain.usecase.LoadModelUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
+import kotlin.math.roundToInt
 import javax.inject.Inject
 
 @HiltViewModel
@@ -29,7 +30,7 @@ class SettingsViewModel @Inject constructor(
         .stateIn(viewModelScope, SharingStarted.Lazily, 0.7f)
     
     val maxTokens = _generationSettings.map { it.maxTokens }
-        .stateIn(viewModelScope, SharingStarted.Lazily, 256)
+        .stateIn(viewModelScope, SharingStarted.Lazily, 512)
     
     val topP = _generationSettings.map { it.topP }
         .stateIn(viewModelScope, SharingStarted.Lazily, 0.9f)
@@ -79,7 +80,7 @@ class SettingsViewModel @Inject constructor(
     private val _contextLength = MutableStateFlow(2048)
     val contextLength = _contextLength.asStateFlow()
     
-    private val _cpuThreads = MutableStateFlow(4)
+    private val _cpuThreads = MutableStateFlow(detectCpuThreads())
     val cpuThreads = _cpuThreads.asStateFlow()
     
     private val _gpuLayers = MutableStateFlow(0)
@@ -186,6 +187,15 @@ class SettingsViewModel @Inject constructor(
     fun setGpuLayers(value: Int) {
         _gpuLayers.value = value.coerceIn(0, 100)
     }
+
+    private fun detectCpuThreads(): Int {
+        val available = Runtime.getRuntime().availableProcessors().coerceAtLeast(1)
+        if (available <= 4) return available
+
+        val reservedForSystem = (available * 0.25f).roundToInt().coerceAtLeast(1)
+        val target = available - reservedForSystem
+        return target.coerceIn(4, 8)
+    }
     
     fun setSystemPrompt(value: String) {
         _systemPrompt.value = value
@@ -272,7 +282,7 @@ class SettingsViewModel @Inject constructor(
                 )
                 "balanced" -> GenerationPreferences.GenerationSettings(
                     temperature = 0.7f,
-                    maxTokens = 256,
+                    maxTokens = 512,
                     topP = 0.9f,
                     topK = 40,
                     repeatPenalty = 1.1f,

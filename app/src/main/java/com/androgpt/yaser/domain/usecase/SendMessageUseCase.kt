@@ -31,29 +31,46 @@ class SendMessageUseCase @Inject constructor(
         )
     }
     
-    private fun cleanResponse(text: String): String {
+    private fun cleanResponse(
+        text: String,
+        collapseWhitespace: Boolean
+    ): String {
         var cleaned = text
-        
+
+        // Fast path: if there are no Phi-3 tokens, avoid regex work.
+        if (!cleaned.contains("<|")) {
+            return finaliseWhitespace(cleaned, collapseWhitespace)
+        }
+
         // Remove complete stop tokens first
         for (token in STOP_TOKENS) {
             cleaned = cleaned.replace(token, "")
         }
-        
+
         // Remove any Phi-3 token pattern (complete or incomplete)
         // Matches: <|...>, <|..., <|, etc.
         cleaned = cleaned.replace(Regex("<\\|[^>]*\\|?>?"), "")
-        
+
         // Remove any remaining partial tokens at the end of the string
         cleaned = cleaned.replace(Regex("<\\|[^>]*$"), "")
         cleaned = cleaned.replace(Regex("<$"), "")
-        
-        // Remove repeated whitespace
-        cleaned = cleaned.replace(Regex("\\s+"), " ")
-        
-        // Trim
-        cleaned = cleaned.trim()
-        
-        return cleaned
+
+        return finaliseWhitespace(cleaned, collapseWhitespace)
+    }
+
+    private fun finaliseWhitespace(text: String, collapseWhitespace: Boolean): String {
+        var result = text
+        if (collapseWhitespace) {
+            result = result.replace("\r\n", "\n")
+            result = result.replace(Regex("[ \t]+"), " ")
+            result = result.replace(Regex("\n{3,}"), "\n\n")
+            result = result.lineSequence()
+                .joinToString("\n") { it.trimEnd() }
+            result = result.trim()
+        } else {
+            result = result.trimEnd()
+        }
+        return result
     }
     
     private fun buildPrompt(messages: List<Message>, systemPrompt: String): String {
@@ -160,13 +177,19 @@ class SendMessageUseCase @Inject constructor(
             when (state) {
                 is GenerationState.Generating -> {
                     // Clean the response text during generation
-                    fullResponse = cleanResponse(state.currentText)
+                    fullResponse = cleanResponse(
+                        text = state.currentText,
+                        collapseWhitespace = false
+                    )
                     Log.v(TAG, "Generating - cleaned text length: ${fullResponse.length}")
                     emit(GenerationState.Generating(fullResponse))
                 }
                 is GenerationState.Complete -> {
                     // Clean the final response text
-                    fullResponse = cleanResponse(state.text)
+                    fullResponse = cleanResponse(
+                        text = state.text,
+                        collapseWhitespace = true
+                    )
                     
                     Log.d(TAG, "Complete - final cleaned response (${fullResponse.length} chars): $fullResponse")
                     

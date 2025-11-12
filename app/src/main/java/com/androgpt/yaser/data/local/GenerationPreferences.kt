@@ -28,11 +28,12 @@ class GenerationPreferences(private val context: Context) {
     private val MIROSTAT = intPreferencesKey("mirostat")
         private val MIROSTAT_TAU = floatPreferencesKey("mirostat_tau")
         private val MIROSTAT_ETA = floatPreferencesKey("mirostat_eta")
-    private val SYSTEM_PROMPT = stringPreferencesKey("system_prompt")
+        private val SYSTEM_PROMPT = stringPreferencesKey("system_prompt")
+        private const val LEGACY_NO_EMOJI_PROMPT = "You are a helpful AI assistant. Do not use emoji characters in your responses - use text-based emoticons like :) or <3 instead."
         
         // Defaults
         const val DEFAULT_TEMPERATURE = 0.7f
-        const val DEFAULT_MAX_TOKENS = 256  // Reduced from 512 to prevent rambling
+    const val DEFAULT_MAX_TOKENS = 512  // Higher default to avoid mid-sentence cutoffs
         const val DEFAULT_TOP_P = 0.9f
         const val DEFAULT_TOP_K = 40
         const val DEFAULT_REPEAT_PENALTY = 1.1f
@@ -43,7 +44,7 @@ class GenerationPreferences(private val context: Context) {
         const val DEFAULT_MIROSTAT = 0
         const val DEFAULT_MIROSTAT_TAU = 5.0f
         const val DEFAULT_MIROSTAT_ETA = 0.1f
-        const val DEFAULT_SYSTEM_PROMPT = "You are a helpful AI assistant. Do not use emoji characters in your responses - use text-based emoticons like :) or <3 instead."
+    const val DEFAULT_SYSTEM_PROMPT = "You are a helpful AI assistant."
     }
     
     data class GenerationSettings(
@@ -82,6 +83,13 @@ class GenerationPreferences(private val context: Context) {
     
     fun getSettings(): Flow<GenerationSettings> {
         return context.settingsDataStore.data.map { preferences ->
+            val storedPrompt = preferences[SYSTEM_PROMPT]
+            val resolvedPrompt = when (storedPrompt) {
+                null -> DEFAULT_SYSTEM_PROMPT
+                LEGACY_NO_EMOJI_PROMPT -> DEFAULT_SYSTEM_PROMPT
+                else -> storedPrompt
+            }
+
             GenerationSettings(
                 temperature = preferences[TEMPERATURE] ?: DEFAULT_TEMPERATURE,
                 maxTokens = preferences[MAX_TOKENS] ?: DEFAULT_MAX_TOKENS,
@@ -95,7 +103,7 @@ class GenerationPreferences(private val context: Context) {
                 mirostat = preferences[MIROSTAT] ?: DEFAULT_MIROSTAT,
                 mirostatTau = preferences[MIROSTAT_TAU] ?: DEFAULT_MIROSTAT_TAU,
                 mirostatEta = preferences[MIROSTAT_ETA] ?: DEFAULT_MIROSTAT_ETA,
-                systemPrompt = preferences[SYSTEM_PROMPT] ?: DEFAULT_SYSTEM_PROMPT
+                systemPrompt = resolvedPrompt
             )
         }
     }

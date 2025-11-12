@@ -3,6 +3,8 @@ package com.androgpt.yaser.presentation.models
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.text.ClickableText
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Delete
@@ -12,9 +14,13 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextDecoration
+import androidx.compose.ui.platform.LocalUriHandler
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.androgpt.yaser.domain.model.ModelInfo
+import java.io.File
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -190,35 +196,91 @@ fun LocalModelsTab(
     
     // Enhanced Info Dialog
     showInfoDialog?.let { (modelInfo, downloadableModel) ->
+    val listState = rememberLazyListState()
+        val uriHandler = LocalUriHandler.current
+        val userFacingPath = remember(modelInfo.filePath) {
+            val fileName = File(modelInfo.filePath).name
+            val packageName = modelInfo.filePath
+                .substringAfter("/data/user/0/")
+                .substringBefore("/")
+                .takeIf { it.isNotEmpty() }
+                ?: "com.androgpt.yaser"
+            "/data/data/$packageName/files/models/$fileName"
+        }
+        val packageName = remember(modelInfo.filePath) {
+            modelInfo.filePath
+                .substringAfter("/data/user/0/")
+                .substringBefore("/")
+                .takeIf { it.isNotEmpty() }
+                ?: "com.androgpt.yaser"
+        }
         AlertDialog(
             onDismissRequest = { showInfoDialog = null },
             icon = { Icon(Icons.Default.CheckCircle, contentDescription = null) },
             title = { Text(modelInfo.name) },
             text = {
-                Column(
+                LazyColumn(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .heightIn(max = 360.dp),
+                    state = listState,
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
                     downloadableModel?.let { dlModel ->
-                        Text(dlModel.description, style = MaterialTheme.typography.bodyMedium)
-                        
-                        Divider()
-                        
-                        Text("Capabilities:", style = MaterialTheme.typography.titleSmall)
-                        Text(dlModel.capabilities, style = MaterialTheme.typography.bodySmall)
-                        
-                        Divider()
-                        
-                        Text("Recommended For:", style = MaterialTheme.typography.titleSmall)
-                        Text(dlModel.recommendedFor, style = MaterialTheme.typography.bodySmall)
-                        
-                        Divider()
-                        
-                        Text("Technical Details:", style = MaterialTheme.typography.titleSmall)
-                        Text("Creator: ${dlModel.creator}", style = MaterialTheme.typography.bodySmall)
-                        Text("Quantization: ${dlModel.quantization}", style = MaterialTheme.typography.bodySmall)
+                        item("description") {
+                            Text(dlModel.description, style = MaterialTheme.typography.bodyMedium)
+                        }
+                        item("capabilities_header") {
+                            Divider()
+                            Text("Capabilities:", style = MaterialTheme.typography.titleSmall)
+                        }
+                        item("capabilities") {
+                            Text(dlModel.capabilities, style = MaterialTheme.typography.bodySmall)
+                        }
+                        item("recommended_header") {
+                            Divider()
+                            Text("Recommended For:", style = MaterialTheme.typography.titleSmall)
+                        }
+                        item("recommended") {
+                            Text(dlModel.recommendedFor, style = MaterialTheme.typography.bodySmall)
+                        }
+                        item("technical_header") {
+                            Divider()
+                            Text("Technical Details:", style = MaterialTheme.typography.titleSmall)
+                        }
+                        item("technical") {
+                            Text("Creator: ${dlModel.creator}", style = MaterialTheme.typography.bodySmall)
+                            Text("Quantization: ${dlModel.quantization}", style = MaterialTheme.typography.bodySmall)
+                        }
+                        item("download_url") {
+                            Divider()
+                            Text("Download URL:", style = MaterialTheme.typography.titleSmall)
+                            ClickableText(
+                                text = AnnotatedString(dlModel.downloadUrl),
+                                style = MaterialTheme.typography.bodySmall.copy(
+                                    color = MaterialTheme.colorScheme.primary,
+                                    textDecoration = TextDecoration.Underline
+                                ),
+                                onClick = { uriHandler.openUri(dlModel.downloadUrl) }
+                            )
+                        }
                     }
-                    Text("File Size: ${formatFileSize(modelInfo.size)}", style = MaterialTheme.typography.bodySmall)
-                    Text("File Path: ${modelInfo.filePath}", style = MaterialTheme.typography.labelSmall)
+                    item("file_size") {
+                        Text("File Size: ${formatFileSize(modelInfo.size)}", style = MaterialTheme.typography.bodySmall)
+                    }
+                    item("stored_at") {
+                        Text(
+                            text = "Stored at: $userFacingPath",
+                            style = MaterialTheme.typography.labelSmall
+                        )
+                    }
+                    item("access_note") {
+                        Text(
+                            text = "Note: App-private storage requires root or 'adb shell run-as $packageName' to access.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
                 }
             },
             confirmButton = {

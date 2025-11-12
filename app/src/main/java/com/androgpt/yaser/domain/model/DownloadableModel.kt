@@ -63,6 +63,52 @@ object AvailableModels {
                 "• Requires 6GB+ RAM for best performance\n" +
                 "⭐ Excellent quality/size ratio"
     )
+
+        val DOLPHIN3_LLAMA_3_2_1B_Q8_0 = DownloadableModel(
+                id = "dolphin3-llama3.2-1b-q8_0",
+                name = "Dolphin 3.0 (Llama 3.2 1B) Q8",
+                description = "Community Dolphin 3.0 fine-tune of Meta Llama 3.2 1B, Q8_0 quantization",
+                downloadUrl = "https://huggingface.co/bartowski/Dolphin3.0-Llama3.2-1B-GGUF/resolve/main/Dolphin3.0-Llama3.2-1B-Q8_0.gguf",
+                fileSize = 1321086976L, // ~1.32 GB (actual server file size)
+                fileName = "Dolphin3.0-Llama3.2-1B-Q8_0.gguf",
+                quantization = "Q8_0",
+                creator = "Bartowski",
+                capabilities = "• 1 billion parameters\n" +
+                                "• Dolphin 3.0 conversational tuning\n" +
+                                "• High-quality Q8 quantisation\n" +
+                                "• Friendly uncensored responses\n" +
+                                "• Quick inference for mobile\n" +
+                                "• Good at step-by-step chats",
+                recommendedFor = "Best for: Lightweight conversational agents, everyday Q&A, roleplay/chatting\n\n" +
+                                "Recommended settings:\n" +
+                                "• Context Length: 2048-3072\n" +
+                                "• Temperature: 0.7-0.85\n" +
+                                "• Works well on 4GB+ RAM devices\n" +
+                                "🌊 Compact Dolphin experience"
+        )
+
+    val DOLPHIN3_LLAMA_3_2_3B_Q4_K_M = DownloadableModel(
+        id = "dolphin3-llama3.2-3b-q4_k_m",
+        name = "Dolphin 3.0 (Llama 3.2 3B) Q4",
+        description = "Community Dolphin 3.0 fine-tune of Meta Llama 3.2 3B, Q4_K_M quantization",
+        downloadUrl = "https://huggingface.co/bartowski/Dolphin3.0-Llama3.2-3B-GGUF/resolve/main/Dolphin3.0-Llama3.2-3B-Q4_K_M.gguf",
+        fileSize = 2019382400L, // ~2.02 GB (actual server file size)
+        fileName = "Dolphin3.0-Llama3.2-3B-Q4_K_M.gguf",
+        quantization = "Q4_K_M",
+        creator = "Bartowski",
+        capabilities = "• 3 billion parameters\n" +
+                "• Instruction-tuned Dolphin 3.0 style\n" +
+                "• Friendly, uncensored chat behaviour\n" +
+                "• Q4_K_M for fast mobile inference\n" +
+                "• Strong conversation quality\n" +
+                "• Good coding and reasoning mix",
+        recommendedFor = "Best for: Conversational agents, creative writing, casual coding help\n\n" +
+                "Recommended settings:\n" +
+                "• Context Length: 4096\n" +
+                "• Temperature: 0.7-0.9 for lively replies\n" +
+                "• Runs comfortably on 6GB+ RAM devices\n" +
+                "🌊 Popular community fine-tune"
+    )
     
     // ========== HUGGINGFACE - SMOLLM2 MODELS ==========
     
@@ -258,6 +304,8 @@ object AvailableModels {
         // Meta Llama 3.2 models
         LLAMA_3_2_1B_Q8_0,        // ~1.32 GB - Fast & accurate
         LLAMA_3_2_3B_Q6_K,        // ~2.64 GB - Balanced quality
+                DOLPHIN3_LLAMA_3_2_1B_Q8_0, // ~1.32 GB - Compact community fine-tune
+                DOLPHIN3_LLAMA_3_2_3B_Q4_K_M, // ~2.02 GB - Community fine-tune
         // HuggingFace SmolLM2 models
         SMOLLM2_1_7B_Q8_0,        // ~1.82 GB - Efficient mobile
         // Google Gemma 2 models

@@ -143,11 +143,11 @@ fun SettingsScreen(
                         valueRange = 64f..1024f,
                         steps = 15,
                         valueFormatter = { it.toInt().toString() },
-                        info = "Maximum number of tokens (words/subwords) in the response.\n\n" +
-                                "• 64-128: Very short, concise answers\n" +
-                                "• 256-512: Medium length responses (recommended)\n" +
-                                "• 512-1024: Long, detailed responses\n\n" +
-                                "Higher values increase generation time and memory usage."
+            info = "Maximum number of tokens (words/subwords) in the response.\n\n" +
+                "• 64-128: Very short, concise answers\n" +
+                "• 256-512: Medium length responses (default 512)\n" +
+                "• 512-1024: Long, detailed responses\n\n" +
+                "Higher values increase generation time and memory usage."
                     )
                     
                     Divider()

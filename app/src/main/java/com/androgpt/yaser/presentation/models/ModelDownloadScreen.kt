@@ -4,6 +4,8 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.text.ClickableText
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Close
@@ -18,6 +20,9 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalUriHandler
+import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.androgpt.yaser.domain.model.DownloadState
@@ -478,52 +483,86 @@ fun DownloadableModelItem(
     
     // Model Info Dialog
     if (showModelInfo) {
+        val listState = rememberLazyListState()
+        val uriHandler = LocalUriHandler.current
         AlertDialog(
             onDismissRequest = { showModelInfo = false },
             title = { Text(model.name) },
             text = {
-                Column(
+                LazyColumn(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .heightIn(max = 360.dp),
+                    state = listState,
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    Text(
-                        text = model.description,
-                        style = MaterialTheme.typography.bodyMedium
-                    )
-                    
+                    item("description") {
+                        Text(
+                            text = model.description,
+                            style = MaterialTheme.typography.bodyMedium
+                        )
+                    }
                     if (model.capabilities.isNotEmpty()) {
+                        item("capabilities") {
+                            Divider()
+                            Text(
+                                text = "Capabilities:",
+                                style = MaterialTheme.typography.titleSmall
+                            )
+                            Text(
+                                text = model.capabilities,
+                                style = MaterialTheme.typography.bodySmall
+                            )
+                        }
+                    }
+                    if (model.recommendedFor.isNotEmpty()) {
+                        item("recommended") {
+                            Divider()
+                            Text(
+                                text = model.recommendedFor,
+                                style = MaterialTheme.typography.bodySmall
+                            )
+                        }
+                    }
+                    item("file_size") {
                         Divider()
                         Text(
-                            text = "Capabilities:",
+                            text = "File Size: ${formatFileSize(model.fileSize)}",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Text(
+                            text = "Quantization: ${model.quantization}",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                    item("download_url") {
+                        Divider()
+                        Text(
+                            text = "Download URL:",
                             style = MaterialTheme.typography.titleSmall
                         )
-                        Text(
-                            text = model.capabilities,
-                            style = MaterialTheme.typography.bodySmall
+                        val annotated = remember(model.downloadUrl) {
+                            AnnotatedString(model.downloadUrl)
+                        }
+                        ClickableText(
+                            text = annotated,
+                            style = MaterialTheme.typography.bodySmall.copy(
+                                color = MaterialTheme.colorScheme.primary,
+                                textDecoration = TextDecoration.Underline
+                            ),
+                            onClick = { uriHandler.openUri(model.downloadUrl) }
                         )
                     }
-                    
-                    if (model.recommendedFor.isNotEmpty()) {
-                        Divider()
-                        Text(
-                            text = model.recommendedFor,
-                            style = MaterialTheme.typography.bodySmall
-                        )
-                    }
-                    
-                    Divider()
-                    Text(
-                        text = "File Size: ${formatFileSize(model.fileSize)}",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    Text(
-                        text = "Quantization: ${model.quantization}",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
                 }
             },
             confirmButton = {
+                TextButton(onClick = { uriHandler.openUri(model.downloadUrl) }) {
+                    Text("Open Link")
+                }
+            },
+            dismissButton = {
                 TextButton(onClick = { showModelInfo = false }) {
                     Text("Close")
                 }

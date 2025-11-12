@@ -18,169 +18,280 @@
 #define LOGE(...) __android_log_print(ANDROID_LOG_ERROR, LOG_TAG, __VA_ARGS__)
 
 /**
- * Map common emoji codepoints to text-based symbolic representations
- * Returns nullptr if not a recognized emoji
+ * Safely create a Java string from UTF-8 bytes by decoding into UTF-16.
+ * Handles surrogate pairs so 4-byte emoji sequences survive without crashing JNI.
  */
-static const char* emojiToSymbolic(uint32_t codepoint) {
-    switch (codepoint) {
-        // Smileys
-        case 0x1F600: return ":D";        // 😀 grinning face
-        case 0x1F601: return ":D";        // 😁 beaming face
-        case 0x1F602: return ":'D";       // 😂 tears of joy
-        case 0x1F603: return ":D";        // 😃 grinning face with big eyes
-        case 0x1F604: return ":)";        // 😄 grinning face with smiling eyes
-        case 0x1F605: return "^^";        // 😅 grinning face with sweat
-        case 0x1F606: return "XD";        // 😆 grinning squinting face
-        case 0x1F607: return "O:)";       // 😇 smiling face with halo
-        case 0x1F609: return ";)";        // 😉 winking face
-        case 0x1F60A: return ":)";        // 😊 smiling face with smiling eyes
-        case 0x1F60B: return ":P";        // 😋 face savoring food
-        case 0x1F60D: return "<3";        // 😍 smiling face with heart-eyes
-        case 0x1F60E: return "B)";        // 😎 smiling face with sunglasses
-        case 0x1F60F: return ";)";        // 😏 smirking face
-        case 0x1F610: return ":|";        // 😐 neutral face
-        case 0x1F612: return ":/";        // 😒 unamused face
-        case 0x1F613: return "^^'";       // 😓 downcast face with sweat
-        case 0x1F614: return "-_-";       // 😔 pensive face
-        case 0x1F618: return ":*";        // 😘 face blowing a kiss
-        case 0x1F61A: return ":*";        // 😚 kissing face
-        case 0x1F61C: return ";P";        // 😜 winking face with tongue
-        case 0x1F61D: return "XP";        // 😝 squinting face with tongue
-        case 0x1F620: return ">:(";       // 😠 angry face
-        case 0x1F621: return ">:O";       // 😡 pouting face
-        case 0x1F622: return ":'(";       // 😢 crying face
-        case 0x1F62D: return "T_T";       // 😭 loudly crying face
-        case 0x1F631: return "O_O";       // 😱 face screaming in fear
-        case 0x1F633: return "O.O";       // 😳 flushed face
-        case 0x1F642: return ":)";        // 🙂 slightly smiling face
-        case 0x1F643: return "(:";        // 🙃 upside-down face (changed from "(:" to "(")
-        case 0x1F644: return "-_-";       // 🙄 face with rolling eyes
-        
-        // Hearts & Symbols
-        case 0x2764:  return "<3";        // ❤ red heart
-        case 0x1F495: return "<3<3";      // 💕 two hearts
-        case 0x1F496: return "<3*";       // 💖 sparkling heart
-        case 0x1F497: return "<3~";       // 💗 growing heart
-        case 0x1F498: return "<3!";       // 💘 heart with arrow
-        case 0x1F499: return "<3";        // 💙 blue heart
-        case 0x1F49A: return "<3";        // 💚 green heart
-        case 0x1F49B: return "<3";        // 💛 yellow heart
-        case 0x1F49C: return "<3";        // 💜 purple heart
-        case 0x1F49D: return "<3";        // 💝 heart with ribbon
-        case 0x1F49E: return "<3";        // 💞 revolving hearts
-        case 0x1F49F: return "</3";       // 💟 heart decoration
-        case 0x1F494: return "</3";       // 💔 broken heart
-        
-        // Hands & Gestures
-        case 0x1F44D: return "(y)";       // 👍 thumbs up
-        case 0x1F44E: return "(n)";       // 👎 thumbs down
-        case 0x1F44C: return "OK";        // 👌 OK hand
-        case 0x1F44F: return "*clap*";    // 👏 clapping hands
-        case 0x1F64F: return "*pray*";    // 🙏 folded hands
-        case 0x270C:  return "V";         // ✌ victory hand
-        case 0x1F44B: return "*wave*";    // 👋 waving hand
-        case 0x1F91D: return "*shake*";   // 🤝 handshake
-        
-        // Common symbols
-        case 0x2705:  return "[OK]";      // ✅ check mark
-        case 0x274C:  return "[X]";       // ❌ cross mark
-        case 0x2B50:  return "*";         // ⭐ star
-        case 0x1F525: return "*fire*";    // 🔥 fire
-        case 0x1F4AF: return "100";       // 💯 hundred points
-        case 0x1F389: return "*party*";   // 🎉 party popper
-        
-        default: return nullptr;
+static jstring safeNewStringUTF(JNIEnv* env, const char* bytes) {
+    static const jchar EMPTY_STR[] = {0};
+
+    if (bytes == nullptr || bytes[0] == '\0') {
+        LOGW("safeNewStringUTF: empty input");
+        return env->NewString(EMPTY_STR, 0);
     }
+
+    const unsigned char* ptr = reinterpret_cast<const unsigned char*>(bytes);
+    std::vector<jchar> utf16;
+    utf16.reserve(strlen(bytes));
+
+    while (*ptr) {
+        uint32_t codepoint = 0;
+        unsigned char c = *ptr;
+
+        if (c <= 0x7F) {
+            codepoint = c;
+            ptr++;
+        } else if ((c & 0xE0) == 0xC0) {
+            if ((ptr[1] & 0xC0) != 0x80) {
+                LOGW("safeNewStringUTF: invalid 2-byte sequence start 0x%02X", c);
+                ptr++;
+                continue;
+            }
+            codepoint = ((c & 0x1F) << 6) | (ptr[1] & 0x3F);
+            ptr += 2;
+            if (codepoint < 0x80) {
+                LOGW("safeNewStringUTF: overlong 2-byte sequence");
+                continue;
+            }
+        } else if ((c & 0xF0) == 0xE0) {
+            if ((ptr[1] & 0xC0) != 0x80 || (ptr[2] & 0xC0) != 0x80) {
+                LOGW("safeNewStringUTF: invalid 3-byte sequence start 0x%02X", c);
+                ptr++;
+                continue;
+            }
+            codepoint = ((c & 0x0F) << 12) | ((ptr[1] & 0x3F) << 6) | (ptr[2] & 0x3F);
+            ptr += 3;
+            if (codepoint < 0x800 || (codepoint >= 0xD800 && codepoint <= 0xDFFF)) {
+                LOGW("safeNewStringUTF: invalid 3-byte codepoint 0x%X", codepoint);
+                continue;
+            }
+        } else if ((c & 0xF8) == 0xF0) {
+            if ((ptr[1] & 0xC0) != 0x80 || (ptr[2] & 0xC0) != 0x80 || (ptr[3] & 0xC0) != 0x80) {
+                LOGW("safeNewStringUTF: invalid 4-byte sequence start 0x%02X", c);
+                ptr++;
+                continue;
+            }
+            codepoint = ((c & 0x07) << 18) | ((ptr[1] & 0x3F) << 12) |
+                        ((ptr[2] & 0x3F) << 6) | (ptr[3] & 0x3F);
+            ptr += 4;
+            if (codepoint < 0x10000 || codepoint > 0x10FFFF) {
+                LOGW("safeNewStringUTF: invalid 4-byte codepoint 0x%X", codepoint);
+                continue;
+            }
+        } else {
+            LOGW("safeNewStringUTF: invalid UTF-8 start byte 0x%02X", c);
+            ptr++;
+            continue;
+        }
+
+        if (codepoint <= 0xFFFF) {
+            utf16.push_back(static_cast<jchar>(codepoint));
+        } else {
+            codepoint -= 0x10000;
+            jchar high = static_cast<jchar>(0xD800 + (codepoint >> 10));
+            jchar low = static_cast<jchar>(0xDC00 + (codepoint & 0x3FF));
+            utf16.push_back(high);
+            utf16.push_back(low);
+        }
+    }
+
+    if (utf16.empty()) {
+        return env->NewString(EMPTY_STR, 0);
+    }
+
+    return env->NewString(utf16.data(), static_cast<jsize>(utf16.size()));
 }
 
 /**
- * Safely create a Java string from UTF-8 bytes with emoji to symbolic conversion
- * Converts emojis to text symbols like :) <3 etc. to avoid JNI Modified UTF-8 crashes
+ * Convert UTF-8 chunks to UTF-16 while carrying incomplete multi-byte sequences across calls.
  */
-static jstring safeNewStringUTF(JNIEnv* env, const char* bytes) {
-    if (bytes == nullptr || bytes[0] == '\0') {
-        LOGW("safeNewStringUTF: empty input");
-        return env->NewStringUTF("");
-    }
-    
-    LOGI("safeNewStringUTF: input length=%zu", strlen(bytes));
-    
-    // Convert UTF-8 to safe ASCII representation, replacing emojis with symbolic text
-    std::string result;
-    const unsigned char* ptr = (const unsigned char*)bytes;
-    
-    while (*ptr) {
-        unsigned char c = *ptr;
-        
+static jstring safeNewStringUTFStreaming(
+        JNIEnv* env,
+        const std::string& chunk,
+        std::string& remainder) {
+
+    std::string combined = remainder;
+    combined.append(chunk);
+
+    const unsigned char* ptr = reinterpret_cast<const unsigned char*>(combined.data());
+    const size_t total = combined.size();
+    std::vector<jchar> utf16;
+    utf16.reserve(combined.size());
+
+    size_t index = 0;
+    while (index < total) {
+        unsigned char c = ptr[index];
+        uint32_t codepoint = 0;
+        size_t expected = 0;
+
         if (c <= 0x7F) {
-            // 1-byte sequence (ASCII) - keep as is
-            result += (char)c;
-            ptr++;
+            codepoint = c;
+            expected = 1;
         } else if ((c & 0xE0) == 0xC0) {
-            // 2-byte sequence - keep as is (safe for Modified UTF-8)
-            if (ptr[1] && (ptr[1] & 0xC0) == 0x80) {
-                result += (char)ptr[0];
-                result += (char)ptr[1];
-                ptr += 2;
-            } else {
-                LOGW("Invalid 2-byte sequence at position %zu", ptr - (const unsigned char*)bytes);
-                ptr++; // Invalid, skip
-            }
+            expected = 2;
         } else if ((c & 0xF0) == 0xE0) {
-            // 3-byte sequence - keep as is (safe for Modified UTF-8)
-            if (ptr[1] && ptr[2] && (ptr[1] & 0xC0) == 0x80 && (ptr[2] & 0xC0) == 0x80) {
-                result += (char)ptr[0];
-                result += (char)ptr[1];
-                result += (char)ptr[2];
-                ptr += 3;
-            } else {
-                LOGW("Invalid 3-byte sequence at position %zu", ptr - (const unsigned char*)bytes);
-                ptr++; // Invalid, skip
-            }
+            expected = 3;
         } else if ((c & 0xF8) == 0xF0) {
-            // 4-byte sequence (emoji!) - convert to symbolic representation
-            if (ptr[1] && ptr[2] && ptr[3] && 
-                (ptr[1] & 0xC0) == 0x80 && (ptr[2] & 0xC0) == 0x80 && (ptr[3] & 0xC0) == 0x80) {
-                
-                // Decode the codepoint
-                uint32_t codepoint = ((c & 0x07) << 18) | 
-                                    ((ptr[1] & 0x3F) << 12) | 
-                                    ((ptr[2] & 0x3F) << 6) | 
-                                    (ptr[3] & 0x3F);
-                
-                LOGI("Found emoji: codepoint=0x%X", codepoint);
-                
-                // Try to map to symbolic emoji
-                const char* symbolic = emojiToSymbolic(codepoint);
-                if (symbolic != nullptr) {
-                    LOGI("Converted to symbolic: %s", symbolic);
-                    result += symbolic;
-                } else {
-                    // Unknown emoji - use generic representation
-                    LOGW("Unknown emoji codepoint: 0x%X, using [emoji]", codepoint);
-                    result += "[emoji]";
-                }
-                
-                ptr += 4;
-            } else {
-                LOGW("Invalid 4-byte sequence at position %zu", ptr - (const unsigned char*)bytes);
-                ptr++; // Invalid, skip
-            }
+            expected = 4;
         } else {
-            // Invalid UTF-8 start byte (like 0x8a) - skip it
-            LOGW("Invalid UTF-8 start byte: 0x%02X", c);
-            ptr++;
+            LOGW("safeNewStringUTFStreaming: invalid UTF-8 start byte 0x%02X", c);
+            index++;
+            continue;
+        }
+
+        if (index + expected > total) {
+            // Incomplete multi-byte sequence, keep in remainder.
+            break;
+        }
+
+        switch (expected) {
+            case 1:
+                codepoint = c;
+                break;
+            case 2: {
+                unsigned char c1 = ptr[index + 1];
+                if ((c1 & 0xC0) != 0x80) {
+                    LOGW("safeNewStringUTFStreaming: invalid continuation byte 0x%02X", c1);
+                    index++;
+                    continue;
+                }
+                codepoint = ((c & 0x1F) << 6) | (c1 & 0x3F);
+                if (codepoint < 0x80) {
+                    LOGW("safeNewStringUTFStreaming: overlong 2-byte sequence");
+                    index += 2;
+                    continue;
+                }
+                break;
+            }
+            case 3: {
+                unsigned char c1 = ptr[index + 1];
+                unsigned char c2 = ptr[index + 2];
+                if ((c1 & 0xC0) != 0x80 || (c2 & 0xC0) != 0x80) {
+                    LOGW("safeNewStringUTFStreaming: invalid 3-byte continuation");
+                    index++;
+                    continue;
+                }
+                codepoint = ((c & 0x0F) << 12) | ((c1 & 0x3F) << 6) | (c2 & 0x3F);
+                if (codepoint < 0x800 || (codepoint >= 0xD800 && codepoint <= 0xDFFF)) {
+                    LOGW("safeNewStringUTFStreaming: invalid 3-byte codepoint 0x%X", codepoint);
+                    index += 3;
+                    continue;
+                }
+                break;
+            }
+            case 4: {
+                unsigned char c1 = ptr[index + 1];
+                unsigned char c2 = ptr[index + 2];
+                unsigned char c3 = ptr[index + 3];
+                if ((c1 & 0xC0) != 0x80 ||
+                    (c2 & 0xC0) != 0x80 ||
+                    (c3 & 0xC0) != 0x80) {
+                    LOGW("safeNewStringUTFStreaming: invalid 4-byte continuation");
+                    index++;
+                    continue;
+                }
+                codepoint = ((c & 0x07) << 18) |
+                            ((c1 & 0x3F) << 12) |
+                            ((c2 & 0x3F) << 6) |
+                            (c3 & 0x3F);
+                if (codepoint < 0x10000 || codepoint > 0x10FFFF) {
+                    LOGW("safeNewStringUTFStreaming: invalid 4-byte codepoint 0x%X", codepoint);
+                    index += 4;
+                    continue;
+                }
+                break;
+            }
+        }
+
+        if (codepoint <= 0xFFFF) {
+            utf16.push_back(static_cast<jchar>(codepoint));
+        } else {
+            codepoint -= 0x10000;
+            jchar high = static_cast<jchar>(0xD800 + (codepoint >> 10));
+            jchar low = static_cast<jchar>(0xDC00 + (codepoint & 0x3FF));
+            utf16.push_back(high);
+            utf16.push_back(low);
+        }
+
+        index += expected;
+    }
+
+    if (index < total) {
+        remainder.assign(reinterpret_cast<const char*>(ptr + index), total - index);
+    } else {
+        remainder.clear();
+    }
+
+    if (utf16.empty()) {
+        return env->NewString(nullptr, 0);
+    }
+
+    return env->NewString(utf16.data(), static_cast<jsize>(utf16.size()));
+}
+
+/**
+ * Convert a Java string (UTF-16) to sanitized UTF-8 suitable for llama.cpp consumption.
+ * Preserves emoji code points while skipping malformed surrogate sequences.
+ */
+static std::string sanitizeInputString(JNIEnv* env, jstring jstr) {
+    if (jstr == nullptr) {
+        LOGW("sanitizeInputString: null input string");
+        return "";
+    }
+
+    const jchar* chars = env->GetStringChars(jstr, nullptr);
+    if (chars == nullptr) {
+        LOGW("sanitizeInputString: failed to acquire chars");
+        return "";
+    }
+
+    const jsize length = env->GetStringLength(jstr);
+    std::string result;
+    result.reserve(static_cast<size_t>(length) * 3);
+
+    for (jsize i = 0; i < length; ++i) {
+        uint32_t codepoint = chars[i];
+
+        if (codepoint >= 0xD800 && codepoint <= 0xDBFF) {
+            if (i + 1 < length) {
+                const jchar low = chars[i + 1];
+                if (low >= 0xDC00 && low <= 0xDFFF) {
+                    codepoint = (((codepoint - 0xD800) << 10) | (low - 0xDC00)) + 0x10000;
+                    ++i;
+                } else {
+                    LOGW("sanitizeInputString: invalid surrogate pair at index %d", i);
+                    continue;
+                }
+            } else {
+                LOGW("sanitizeInputString: truncated surrogate at end of string");
+                break;
+            }
+        } else if (codepoint >= 0xDC00 && codepoint <= 0xDFFF) {
+            LOGW("sanitizeInputString: unexpected low surrogate 0x%X at index %d", codepoint, i);
+            continue;
+        }
+
+        if (codepoint <= 0x7F) {
+            result.push_back(static_cast<char>(codepoint));
+        } else if (codepoint <= 0x7FF) {
+            result.push_back(static_cast<char>(0xC0 | (codepoint >> 6)));
+            result.push_back(static_cast<char>(0x80 | (codepoint & 0x3F)));
+        } else if (codepoint <= 0xFFFF) {
+            result.push_back(static_cast<char>(0xE0 | (codepoint >> 12)));
+            result.push_back(static_cast<char>(0x80 | ((codepoint >> 6) & 0x3F)));
+            result.push_back(static_cast<char>(0x80 | (codepoint & 0x3F)));
+        } else if (codepoint <= 0x10FFFF) {
+            result.push_back(static_cast<char>(0xF0 | (codepoint >> 18)));
+            result.push_back(static_cast<char>(0x80 | ((codepoint >> 12) & 0x3F)));
+            result.push_back(static_cast<char>(0x80 | ((codepoint >> 6) & 0x3F)));
+            result.push_back(static_cast<char>(0x80 | (codepoint & 0x3F)));
+        } else {
+            LOGW("sanitizeInputString: invalid codepoint 0x%X", codepoint);
         }
     }
-    
-    LOGI("safeNewStringUTF: result length=%zu, content=%s", result.length(), result.c_str());
-    
-    // Use regular NewStringUTF since we've sanitized the string
-    if (result.empty()) {
-        return env->NewStringUTF("");
-    }
-    
-    return env->NewStringUTF(result.c_str());
+
+    env->ReleaseStringChars(jstr, chars);
+    LOGI("sanitizeInputString: produced %zu bytes from %d code units", result.size(), length);
+    return result;
 }
 
 // Global state
@@ -321,13 +432,12 @@ Java_com_androgpt_yaser_data_inference_LlamaEngine_nativeGenerate(
         return safeNewStringUTF(env, "");
     }
     
-    const char* promptStr = env->GetStringUTFChars(prompt, nullptr);
-    LOGI("Generating with prompt: %s", promptStr);
+    const std::string promptStr = sanitizeInputString(env, prompt);
+    LOGI("Generating with prompt: %s", promptStr.c_str());
     LOGI("Max tokens: %d, Temperature: %.2f", maxTokens, temperature);
     
     // Tokenize prompt using common_tokenize
-    std::vector<llama_token> tokens_list = common_tokenize(g_ctx, std::string(promptStr), true);
-    env->ReleaseStringUTFChars(prompt, promptStr);
+    std::vector<llama_token> tokens_list = common_tokenize(g_ctx, promptStr, true);
     
     const int n_ctx = llama_n_ctx(g_ctx);
     const int n_predict = maxTokens;
@@ -433,8 +543,8 @@ Java_com_androgpt_yaser_data_inference_LlamaEngine_nativeGenerateStream(
     
     g_should_stop.store(false);
     
-    const char* promptStr = env->GetStringUTFChars(prompt, nullptr);
-    LOGI("Streaming generation with prompt: %s", promptStr);
+    const std::string promptStr = sanitizeInputString(env, prompt);
+    LOGI("Streaming generation with prompt: %s", promptStr.c_str());
     
     // **CRITICAL FIX: Clear KV cache before each generation**
     llama_memory_t mem = llama_get_memory(g_ctx);
@@ -447,8 +557,7 @@ Java_com_androgpt_yaser_data_inference_LlamaEngine_nativeGenerateStream(
     jmethodID onCompleteMethod = env->GetMethodID(callbackClass, "onComplete", "()V");
     
     // Tokenize prompt using common_tokenize
-    std::vector<llama_token> tokens_list = common_tokenize(g_ctx, std::string(promptStr), true);
-    env->ReleaseStringUTFChars(prompt, promptStr);
+    std::vector<llama_token> tokens_list = common_tokenize(g_ctx, promptStr, true);
     
     const int n_ctx = llama_n_ctx(g_ctx);
     const int n_predict = maxTokens;
@@ -499,6 +608,7 @@ Java_com_androgpt_yaser_data_inference_LlamaEngine_nativeGenerateStream(
     int n_cur = batch.n_tokens;
     int n_decode = 0;
     std::string accumulated_text;
+    std::string utf8_remainder;
     
     // Generation loop with streaming
     while (n_cur <= n_ctx && n_decode < n_predict && !g_should_stop.load()) {
@@ -526,21 +636,17 @@ Java_com_androgpt_yaser_data_inference_LlamaEngine_nativeGenerateStream(
         // Stream the token if not empty - use safe string conversion
         if (!token_str.empty()) {
             LOGI("Token before conversion: length=%zu, first_byte=0x%02X", token_str.length(), (unsigned char)token_str[0]);
-            jstring jtoken = safeNewStringUTF(env, token_str.c_str());
+            jstring jtoken = safeNewStringUTFStreaming(env, token_str, utf8_remainder);
             if (jtoken != nullptr) {
-                // Log the Java string length to verify conversion
-                jsize jlen = env->GetStringUTFLength(jtoken);
-                LOGI("Java string length after conversion: %d", jlen);
-                
-                env->CallVoidMethod(callback, onTokenMethod, jtoken);
-                // Check for exceptions in Java callback
-                if (env->ExceptionCheck()) {
-                    LOGE("Exception in onToken callback, clearing and continuing");
-                    env->ExceptionClear();
+                jsize jlen = env->GetStringLength(jtoken);
+                if (jlen > 0) {
+                    env->CallVoidMethod(callback, onTokenMethod, jtoken);
+                    if (env->ExceptionCheck()) {
+                        LOGE("Exception in onToken callback, clearing and continuing");
+                        env->ExceptionClear();
+                    }
                 }
                 env->DeleteLocalRef(jtoken);
-            } else {
-                LOGE("safeNewStringUTF returned nullptr for token");
             }
         }
         
@@ -560,6 +666,21 @@ Java_com_androgpt_yaser_data_inference_LlamaEngine_nativeGenerateStream(
     llama_batch_free(batch);
     llama_sampler_free(smpl);
     
+    // Flush any remaining partial sequences
+    if (!utf8_remainder.empty()) {
+        jstring jflush = safeNewStringUTFStreaming(env, "", utf8_remainder);
+        if (jflush != nullptr && env->GetStringLength(jflush) > 0) {
+            env->CallVoidMethod(callback, onTokenMethod, jflush);
+            if (env->ExceptionCheck()) {
+                LOGE("Exception in onToken flush callback, clearing");
+                env->ExceptionClear();
+            }
+        }
+        if (jflush != nullptr) {
+            env->DeleteLocalRef(jflush);
+        }
+    }
+
     // Call completion callback
     env->CallVoidMethod(callback, onCompleteMethod);
     
