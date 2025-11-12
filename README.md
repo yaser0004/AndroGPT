@@ -64,10 +64,9 @@ The APK package for AndroGPT is provided directly in this repository—no build 
 
 
 
-##  Feedback & Contributions
+##  Feedback
 
 - Report bugs and suggestions via [GitHub Issues](https://github.com/yaser0004/AndroGPT/issues).
-- Pull requests for improvements or new features are welcome! See [CONTRIBUTING.md](./CONTRIBUTING.md) for guidelines.
 
 ---
 
@@ -79,7 +78,7 @@ Distributed under the MIT License. See [LICENSE](./LICENSE) for details.
 
 ##  Contact
 
-Open a GitHub issue or reach out via GitHub for questions or collaboration.
+Open a GitHub issue or reach out via GitHub for questions.
 
 ---
 
